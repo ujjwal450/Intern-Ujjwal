@@ -2,6 +2,7 @@ const express = require("express");
 const Admin = require("../models/admin");
 const User = require("../models/user");
 const auth = require("../middleware/adminAuth");
+const Category  = require('../models/category')
 
 const router = new express.Router();
 
@@ -155,5 +156,58 @@ router.patch("/admin/updateUser/:id", auth, async (req, res) => {
         });
     }
 });
+
+router.post('/admin/addCategory', auth, async (req, res) => {
+    const category = new Category(req.body)
+    try {
+        await category.save()
+        res.status(201).send(category)
+    } catch (error) {
+        res.status(400).send({error})
+    }
+})
+
+router.get('/admin/categories', auth, async (req, res) => {
+    try {
+        const catagories = await Category.find({})
+        console.log(catagories)
+        res.status(200).send(catagories)
+    } catch (error) {
+        res.status(400).send({error})
+    }
+    
+
+})
+
+router.post('/admin/permissions/:id', auth, async (req, res) => {
+    console.log(req.body)
+    const permissions = Object.keys(req.body);
+    console.log(permissions)
+    const allowedPermissions = [
+        'update', 'delete'
+    ];
+    const isValidOperation = permissions.every((permission) =>
+        allowedPermissions.includes(permission)
+    );
+    console.log(isValidOperation)
+    if (!isValidOperation) {
+        return res.status(400).send({
+            error: "Invalid Permission"
+        });
+    }
+    try {
+        const user = await User.findById(req.params.id);
+        user.permissions.push(req.body)
+        await user.save();
+        if (!user) {
+            return res.status(400).send();
+        }
+        res.send(user);
+    } catch (error) {
+        res.status(400).send({
+            error: error.message
+        });
+    }
+})
 
 module.exports = router;
